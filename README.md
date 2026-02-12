@@ -46,13 +46,22 @@ While C++ is increasingly common in embedded systems development, we have chosen
 
 ### Technical Specifications
 - **Concurrency:** Single-Producer Single-Consumer (SPSC).
-- **Synchronization:** The mock implementation uses atomic operations (`stdatomic.h`) to simulate the hardware memory consistency. In the final FPGA port, explicit memory barriers (DMB/DSB instructions) will be used to ensure the PL sees the data write before the head pointer update.
-- **Buffer Size:** 1024 bytes (Power of 2).
-- **Optimization:** Using a power-of-two size allows us to replace the costly modulo operator (`%`) with a bitwise AND (`&`).
-  ```c
-  // Instead of:
-  head = (head + 1) % SIZE;
-  // We use:
-  head = (head + 1) & (SIZE - 1);
-  ```
+- **Synchronization:** The mock implementation uses atomic operations (`stdatomic.h`) to simulate hardware memory consistency. In the final FPGA port, explicit memory barriers (DMB/DSB instructions) will be used to ensure the PL sees the data write before the head pointer update.
+- **Cache Coherence:** Shared OCM ring-buffer memory is treated as **non-cacheable** on the PS side for the first implementation stage. This matches the intended PL direct memory access behavior and avoids stale cache-line visibility issues during bring-up.
+- **Ring Buffer Size:** 16 KB (16,384 Bytes)
+- **Instruction Unit Size:** 512 bits (64 Bytes)
 - **Overflow Policy:** "Drop Latest" – if the buffer is full, the producer will not overwrite unread data, ensuring data integrity for the CAM hardware.
+
+### Future Testing Note: AXI Performance & Instruction Width
+During on-board testing on the FPGA, we may evaluate increasing the **Instruction Unit Size** to **544 bits**. 
+- **The Rationale:** There is a potential concern that exceeding the standard **512-bit** boundary might trigger additional **AXI Packaging/Re-alignment** overhead in the interconnect, which could impact throughput or latency. 
+- **Goal:** We will benchmark both **512-bit** and **544-bit** configurations to verify if AXI re-packing occurs and choose the size that yields the optimal system performance.
+
+### Optimization
+Using a power-of-two size (**16 KB**) allows us to replace the costly modulo operator (`%`) with a bitwise AND (`&`). With a **64-Byte** instruction, this buffer holds exactly **256 instructions**, preventing any wrap-around splitting at the boundaries.
+```c
+// Instead of:
+head = (head + 1) % SIZE;
+// We use:
+head = (head + 1) & (SIZE - 1);
+```

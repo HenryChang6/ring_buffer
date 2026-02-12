@@ -1,4 +1,4 @@
-## 2026-02-12
+## 2026-02-11
 ### Technical Insights: Why Mutexes and Semaphores are "Expensive"
 
 During the refinement of the ring buffer documentation, we discussed why traditional synchronization primitives like Mutexes and Semaphores are considered costly in high-performance and embedded contexts (especially for PS-PL communication).
@@ -26,3 +26,15 @@ Our **Single-Producer Single-Consumer (SPSC)** ring buffer avoids these costs en
 - **Ownership Split:** The Producer *only* writes to the `head` pointer; the Consumer *only* writes to the `tail` pointer.
 - **Atomic Progress:** By using atomic stores/loads (and memory barriers in hardware), we ensure that as long as the buffer isn't full/empty, both sides can progress simultaneously without ever needing to "lock" the other.
 - **Efficiency:** This maps directly to hardware logic, enabling the high throughput required for the "Configurable DSP-Based CAM Architecture."
+
+### Project Specification Update
+- **Instruction Size:** Defined as **512 bits (64 Bytes)**. This aligns with standard AXI data widths and provides a clean mapping for the CAM's Opcode/Address/Data.
+- **Buffer Capacity:** Increased to **16 KB**. This allows for **256 instructions**, providing enough "cushion" to absorb PS-side OS jitter.
+- **AXI Benchmarking:** Added a task to test **544-bit** instruction widths on-board to investigate potential AXI re-packing performance penalties.
+
+## 2026-02-12
+Discussion with Feng:
+> 我們目前 CAM 的 DATA_WIDTH 是 520 bits，是 8 bits 的 header 加上 512 bits 的 payload（剛好 16 個 32-bit value），這個 DATA_WIDTH 當初為什麼會這樣設計？我疑惑的點是因為它既不能被 32 整除也不能被 64 整除。目前我在用 C Mock up Ring Buffer 時在想一個指令的長度要設多少，發現 520 這個數字比較尷尬，因為 Zynq 的 OCM 要透過 AXI-64 讀取，如果 data 是 520 bits 的話就會是沒有對齊的狀態，這樣傳一次 data 可能會觸發兩次 memory 讀取，導致 Latancy 增加。
+
+Conclusion:
+> 對，會有 Alignment 的問題。當初 520 bits 是從 accelerator 那邊過來的，是可以調整的。要注意的是改成 512 bits 和 544 bits 都可以，但上板子測試的時候要注意因為 AXI 協議那邊超過 512 bits 的好像會再打包一次，造成不必要的 overhead，到時候要再測試一下。
