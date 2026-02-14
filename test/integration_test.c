@@ -40,15 +40,19 @@ void* consumer_worker (void* arg) {
         instruction_t out;
         if(rb_consume(&ctx->rb, &out)) {
             uint64_t base = seq * 8u;
+            int valid = 1;
             for (int i = 0; i < 8; i++) {
                 uint8_t expected = (uint8_t)(base + (uint64_t)i);
                 if (out.bytes[i] != expected) {
                     atomic_fetch_add_explicit(&ctx->errors, 1u, memory_order_relaxed);
                     printf("Error: expected %u, got %u\n", (unsigned)expected, (unsigned)out.bytes[i]);
+                    valid = 0;
                     break;
                 }
             }
-            seq++;
+            if (valid) {
+                seq++;
+            }
             atomic_fetch_add_explicit(&ctx->consumed, 1u, memory_order_relaxed);
         } else {
             if (atomic_load_explicit(&ctx->stop, memory_order_acquire) == 1 && atomic_load_explicit(&ctx->rb.head, memory_order_acquire) == atomic_load_explicit(&ctx->rb.tail, memory_order_acquire)) 
