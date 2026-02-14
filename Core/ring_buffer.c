@@ -20,5 +20,14 @@ int rb_write(ring_buffer_t *rb, const instruction_t *item) {
 }
 
 int rb_consume(ring_buffer_t *rb, instruction_t *out) {
-
+    uint32_t tail = atomic_load_explicit(&rb->tail, memory_order_relaxed);
+    uint32_t head = atomic_load_explicit(&rb->head, memory_order_acquire);
+    if (tail == head) {
+        printf("Ring buffer is empty. No instruction to consume.\n");
+        return 0;
+    }
+    uint32_t next_tail = (tail + 1u) & RING_MASK;
+    *out = rb->slots[tail];
+    atomic_store_explicit(&rb->tail, next_tail, memory_order_release);
+    return 1;
 }

@@ -38,3 +38,15 @@ Discussion with Feng:
 
 Conclusion:
 > 對，會有 Alignment 的問題。當初 520 bits 是從 accelerator 那邊過來的，是可以調整的。要注意的是改成 512 bits 和 544 bits 都可以，但上板子測試的時候要注意因為 AXI 協議那邊超過 512 bits 的好像會再打包一次，造成不必要的 overhead，到時候要再測試一下。
+
+## 2026-02-14
+Memory Order
+1. relaxed
+- 只保證 atomic 變數本身操作是 atomic 的，不提供跨變數的先後順序保證
+- 用途：讀自己擁有的 index（e.g., producer 讀 head、consumer 讀 tail）
+2. release
+- 用在 store action，保證在這個 release store 之前的寫入，不會被重排到它後面
+3. acquire
+- 用在 load action，保證在這個 acquire load 之後的讀寫，不能被重排到它前面
+
+在 producer thread 當中，所有 release store 前的指令，會在 consumer threaad 進行 acquire load

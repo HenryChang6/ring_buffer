@@ -4,6 +4,7 @@
 #include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /*
  * Project configuration:
