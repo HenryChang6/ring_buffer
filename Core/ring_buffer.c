@@ -11,7 +11,7 @@ int rb_write(ring_buffer_t *rb, const instruction_t *item) {
     uint32_t next_head = (head + 1u) & RING_MASK;
     // Note: head == tail --> buffer is empty
     if (next_head == tail) { 
-        printf("Ring buffer is full. The latest instruction is dropped.\n");
+        // printf("Ring buffer is full. The latest instruction is dropped.\n");
         return 0;
     }
     rb->slots[head] = *item;
@@ -23,7 +23,7 @@ int rb_consume(ring_buffer_t *rb, instruction_t *out) {
     uint32_t tail = atomic_load_explicit(&rb->tail, memory_order_relaxed);
     uint32_t head = atomic_load_explicit(&rb->head, memory_order_acquire);
     if (tail == head) {
-        printf("Ring buffer is empty. No instruction to consume.\n");
+        // printf("Ring buffer is empty. No instruction to consume.\n");
         return 0;
     }
     uint32_t next_tail = (tail + 1u) & RING_MASK;
