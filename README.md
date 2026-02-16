@@ -65,3 +65,24 @@ head = (head + 1) % SIZE;
 // We use:
 head = (head + 1) & (SIZE - 1);
 ```
+
+## Current Test Workflow
+The current test suite focuses on fast, deterministic functional validation of the SPSC ring buffer.
+
+### How to Run
+- Build all test binaries:
+  - `make all`
+- Run all tests:
+  - `make test`
+- Run a specific test:
+  - `make run-boundary`
+  - `make run-wrap-drop`
+  - `make run-integration`
+
+### What Each Test Covers
+- `boundary_test`
+  - Validates empty-buffer consume behavior, full-buffer write rejection, FIFO drain correctness, and post-drain empty behavior.
+- `wrap_drop_test`
+  - Validates wrap-around index correctness across ring boundaries and confirms drop-latest does not overwrite unread data.
+- `integration_test`
+  - Runs threaded producer/consumer behavior for a short duration (default 2 seconds) and validates end-to-end ordering/integrity counters (`Produced`, `Consumed`, `Dropped`, `Errors`).

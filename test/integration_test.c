@@ -46,7 +46,7 @@ void* consumer_worker (void* arg) {
                 uint8_t expected = (uint8_t)(base + (uint64_t)i);
                 if (out.bytes[i] != expected) {
                     atomic_fetch_add_explicit(&ctx->errors, 1u, memory_order_relaxed);
-                    printf("Error: expected %u, got %u\n", (unsigned)expected, (unsigned)out.bytes[i]);
+                    // printf("Error: expected %u, got %u\n", (unsigned)expected, (unsigned)out.bytes[i]);
                     valid = 0;
                     break;
                 }

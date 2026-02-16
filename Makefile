@@ -2,30 +2,39 @@ CC := gcc
 CFLAGS := -std=c11 -Wall -Wextra -O2 -ICore
 
 CORE_SRC := Core/ring_buffer.c
-DUMMY_TARGET := build/dummy_test
+BOUNDARY_TARGET := build/boundary_test
+WRAP_DROP_TARGET := build/wrap_drop_test
 INTEG_TARGET := build/integration_test
-DUMMY_SRC := test/dummy_test.c
+BOUNDARY_SRC := test/boundary_test.c
+WRAP_DROP_SRC := test/wrap_drop_test.c
 INTEG_SRC := test/integration_test.c
 
-.PHONY: all run run-dummy run-integration clean
+.PHONY: all run-boundary run-wrap-drop run-integration test clean
 
-all: $(DUMMY_TARGET) $(INTEG_TARGET)
+all: $(BOUNDARY_TARGET) $(WRAP_DROP_TARGET) $(INTEG_TARGET)
 
-$(DUMMY_TARGET): $(CORE_SRC) $(DUMMY_SRC)
+$(BOUNDARY_TARGET): $(CORE_SRC) $(BOUNDARY_SRC)
 	@mkdir -p build
-	$(CC) $(CFLAGS) $(DUMMY_SRC) $(CORE_SRC) -o $(DUMMY_TARGET)
+	$(CC) $(CFLAGS) $(BOUNDARY_SRC) $(CORE_SRC) -o $(BOUNDARY_TARGET)
+
+$(WRAP_DROP_TARGET): $(CORE_SRC) $(WRAP_DROP_SRC)
+	@mkdir -p build
+	$(CC) $(CFLAGS) $(WRAP_DROP_SRC) $(CORE_SRC) -o $(WRAP_DROP_TARGET)
 
 $(INTEG_TARGET): $(CORE_SRC) $(INTEG_SRC)
 	@mkdir -p build
 	$(CC) $(CFLAGS) -pthread $(INTEG_SRC) $(CORE_SRC) -o $(INTEG_TARGET)
 
-run: run-dummy
+run-boundary: $(BOUNDARY_TARGET)
+	./$(BOUNDARY_TARGET)
 
-run-dummy: $(DUMMY_TARGET)
-	./$(DUMMY_TARGET)
+run-wrap-drop: $(WRAP_DROP_TARGET)
+	./$(WRAP_DROP_TARGET)
 
 run-integration: $(INTEG_TARGET)
 	./$(INTEG_TARGET)
+
+test: run-boundary run-wrap-drop run-integration
 
 clean:
 	rm -rf build
