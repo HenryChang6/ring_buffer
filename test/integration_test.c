@@ -29,6 +29,7 @@ void* producer_worker (void* arg) {
             atomic_fetch_add_explicit(&ctx->dropped, 1u, memory_order_relaxed);
             usleep(50);
         }
+        usleep(50); // Try to avoid discarding too many instructions
     } 
     return NULL;
 }
