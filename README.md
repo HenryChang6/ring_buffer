@@ -5,21 +5,27 @@ This project aims to implement a mock ring buffer using C multithreading. The im
 
 In this project, we focus on a one-to-one ring buffer implementation. This model is ideal for our target FPGA platform, which requires high-speed communication between the Processing System (PS) and Programmable Logic (PL).
 
-The original implementation used General Purpose (GP) AXI-Lite ports to send instructions from the PS to the DSP-based CAM hardware in the PL. However, the AXI-Lite protocol introduces significant overhead due to bus arbitration and handshake latencies, becoming a system bottleneck. By implementing a ring buffer in On-Chip Memory (OCM), we leverage dual-port RAM characteristics, allowing the PS and PL to access shared data with minimal latency and significantly higher throughput compared to standard bus transactions.
+The original implementation sends instructions from the PS to the DSP-based CAM in the PL through a General Purpose (GP) port using AXI4-Lite. AXI4-Lite is register-based: every register write is a separate, single-beat AXI transaction with its own address, data and response handshake, and bursts are not supported. One CAM instruction (an 8-bit header plus a 512-bit payload) therefore takes many transactions, and the instruction channel becomes the bottleneck of the whole system.
 
-### Technical Deep Dive: AXI-Lite Bottleneck vs. OCM Efficiency
-#### What is AXI Bus Arbitration?
-In a SoC like the Zynq-7000, multiple "Master" devices (e.g., CPU cores, DMA, Video Engines) share the same "Slave" resources via an Interconnect. **AXI Bus Arbitration** is the management mechanism that decides which Master gets control of the bus when multiple requests occur simultaneously. 
+This project replaces that channel with memory-based communication: a ring buffer placed in On-Chip Memory (OCM). The PS writes instructions into the buffer and advances `head`; the PL reads them through a High Performance (HP) AXI port and advances `tail`. The channel still uses AXI. The saving comes from how AXI is used, as explained below.
 
-Think of it as a traffic light:
-- **Latencies:** Every transaction must request access, wait for the arbiter to grant it, and perform a multi-step handshake (`VALID`/`READY`).
-- **Jitter:** If other parts of the system are busy, the CPU might wait longer to send a single command, causing unpredictable timing.
+Target board: ALINX AX7020 (Zynq-7020).
 
-#### Why OCM is Faster
-By moving to an **OCM-based Ring Buffer**, we effectively bypass the "traffic light":
-1. **Dedicated Path:** OCM in Zynq is designed for low-latency, high-priority access. It often features multiple ports, allowing the PS and PL to access memory simultaneously without competing for the same bus cycle.
-2. **Asynchronous Decoupling:** Instead of a "Stop-and-Wait" approach (where the CPU waits for an AXI response), the PS simply writes data to the buffer and moves on. The PL reads the data at its own clock rate.
-3. **Reduced Overhead:** We eliminate the per-transaction arbitration overhead, replacing many small AXI-Lite bursts with a continuous stream of data through shared memory.    
+### Status
+- Done: the C prototype of the ring buffer core and its test suite (this repository).
+- Not done yet: porting to the FPGA and on-board measurement. The benefits listed below are design expectations, not measured results.
+
+### Technical Deep Dive: AXI4-Lite Registers vs. OCM Ring Buffer
+#### Where the overhead comes from
+- **One transaction per register.** With AXI4-Lite the PS can only write one register at a time. Each write goes through the full write-address, write-data and write-response handshakes.
+- **No burst.** AXI4-Lite has no burst transfers, so a wide instruction cannot be sent as one transaction.
+- **Shared path.** The GP port is reached through the PS Central Interconnect, which is shared with other PS traffic.
+
+#### Why the OCM ring buffer is expected to be faster
+1. **Far fewer AXI transactions.** Communication becomes memory-based. The PL fetches instructions from OCM in bursts, so one transaction moves many data beats (and several instructions) instead of one register.
+2. **HP port path.** The HP port goes through the PL to Memory Interconnect instead of the Central Interconnect, which gives higher bandwidth and less contention.
+3. **Native burst support.** The HP ports support burst access, which the register interface cannot use.
+4. **Decoupling.** Instead of waiting for a response to every register write, the PS writes an instruction into the buffer and moves on. The PL consumes instructions at its own pace.
 
 
 ## What is Ring Buffer?
